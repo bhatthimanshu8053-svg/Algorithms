@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadline Intelligence | Student Planner</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div id="auth-screen">
+    <div class="auth-box">
+        <h2 id="auth-main-title">Student Login</h2>
+        <input type="email" id="email" placeholder="Enter Your Email">
+        <input type="password" id="password" placeholder="Password">
+        <button class="btn btn-p" onclick="handleAuth()" id="authBtn">Login</button>
+        <p class="auth-footer">
+            <span id="auth-footer-text">Don't have an account?</span> 
+            <span onclick="toggleAuthMode()" id="toggleMsg" style="color:#6366f1; cursor:pointer; font-weight:700; text-decoration:underline;">Create Account</span>
+        </p>
+    </div>
+</div>
+
+<div id="app-screen">
+    <header>
+        <div class="header-left"><i data-lucide="zap" color="#6366f1"></i><h1>Dashboard</h1></div>
+        <div class="header-right"><span id="userMail"></span><button class="logout-btn" onclick="logout()">Logout</button></div>
+    </header>
+
+    <div id="systemAlert" class="alert-container hidden"></div>
+
+    <div class="main-container">
+        <div class="glass-card">
+            <h3><i data-lucide="plus-circle"></i> New Mission</h3>
+            <div class="form-group"><label>TITLE</label><input type="text" id="tName"></div>
+            <div class="form-group">
+                <label>CATEGORY</label>
+                <select id="tCat">
+                    <option value="General">📁 General</option>
+                    <option value="PBL">🚀 PBL</option>
+                    <option value="Assignment">📝 Assignment</option>
+                    <option value="Exam">🎓 Exam</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>PRIORITY</label>
+                <select id="tPrio"><option value="3">High</option><option value="2">Medium</option><option value="1">Low</option></select>
+            </div>
+            <div class="form-group"><label>DEADLINE</label><input type="date" id="tDate"></div>
+            <button class="btn btn-p" onclick="addTask()">Deploy</button>
+        </div>
+
+        <div class="glass-card">
+            <div class="search-section">
+                <div class="search-box-pro">
+                    <i data-lucide="search" size="18"></i>
+                    <input type="text" id="searchInput" placeholder="Find objective..." oninput="syncFilter()">
+                </div>
+                <select id="prioFilter" onchange="syncFilter()">
+                    <option value="all">All Prio</option>
+                    <option value="3">High</option>
+                    <option value="2">Mid</option>
+                    <option value="1">Low</option>
+                </select>
+            </div>
+            <div id="taskList" class="task-list"></div>
+        </div>
+
+        <div class="glass-card">
+            <h3><i data-lucide="folder"></i> Notes Vault</h3>
+            <div class="form-group"><label>NOTE NAME</label><input type="text" id="noteTitle" placeholder="e.g. Unit 1 Notes"></div>
+            <textarea id="noteContent" placeholder="Content..."></textarea>
+            <button class="btn btn-p" style="background:#8b5cf6;" onclick="addNote()">Save File</button>
+            <div id="notesVault" class="notes-folder-view"></div>
+        </div>
+    </div>
+
+    <div class="bottom-container">
+        <div class="glass-card chart-box"><h3>Completion</h3><div class="c-wrap"><canvas id="statsChart"></canvas></div><h1 id="completionRate">0%</h1></div>
+        <div class="glass-card chart-box"><h3>Priority</h3><div class="c-wrap"><canvas id="prioChart"></canvas></div></div>
+    </div>
+</div>
+
+<div id="noteModal" class="modal hidden">
+    <div class="modal-content">
+        <h2 id="modalTitle"></h2>
+        <div id="modalBody"></div>
+        <button class="btn btn-p" onclick="closeNote()">Close File</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
