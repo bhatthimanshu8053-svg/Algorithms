@@ -22,7 +22,7 @@
         <button class="btn btn-p" onclick="handleAuth()" id="authBtn">Login</button>
         <p class="auth-footer">
             <span id="auth-footer-text">Don't have an account?</span> 
-            <span onclick="toggleAuthMode()" id="toggleMsg" style="color:#6366f1; cursor:pointer; font-weight:700; text-decoration:underline;">Create Account</span>
+            <span onclick="switchScreen()" id="toggleMsg" style="color:#6366f1; cursor:pointer; font-weight:700; text-decoration:underline;">Create Account</span>
         </p>
     </div>
 </div>
@@ -39,6 +39,7 @@
         <div class="glass-card">
             <h3><i data-lucide="plus-circle"></i> New Mission</h3>
             <div class="form-group"><label>TITLE</label><input type="text" id="tName"></div>
+            
             <div class="form-group">
                 <label>CATEGORY</label>
                 <select id="tCat">
@@ -48,53 +49,62 @@
                     <option value="Exam">🎓 Exam</option>
                 </select>
             </div>
+
             <div class="form-group">
                 <label>PRIORITY</label>
-                <select id="tPrio"><option value="3">High</option><option value="2">Medium</option><option value="1">Low</option></select>
+                <select id="tPrio">
+                    <option value="3">High</option>
+                    <option value="2">Medium</option>
+                    <option value="1">Low</option>
+                </select>
             </div>
-            <div class="form-group"><label>DEADLINE</label><input type="date" id="tDate"></div>
-            <button class="btn btn-p" onclick="addTask()">Deploy</button>
-        </div>
 
+            <div class="form-group"><label>DEADLINE</label><input type="date" id="tDate"></div>
+            <button class="btn btn-p" onclick="saveTask()">Deploy</button>
+        </div>
         <div class="glass-card">
             <div class="search-section">
                 <div class="search-box-pro">
                     <i data-lucide="search" size="18"></i>
-                    <input type="text" id="searchInput" placeholder="Find objective..." oninput="syncFilter()">
+                    <input type="text" id="searchInput" placeholder="Find objective...">
                 </div>
-                <select id="prioFilter" onchange="syncFilter()">
-                    <option value="all">All Prio</option>
-                    <option value="3">High</option>
-                    <option value="2">Mid</option>
-                    <option value="1">Low</option>
-                </select>
             </div>
-            <div id="taskList" class="task-list"></div>
+            <div class="task-header-row" style="display: grid; grid-template-columns: 60px 1fr 150px 100px; padding: 12px 20px; background: #1e253a; border-radius: 10px 10px 0 0; font-size: 11px; font-weight: 800; color: #94a3b8; border-bottom: 2px solid #2d334a;">
+                <span>DONE</span>
+                <span>TASK NAME</span>
+                <span>DEADLINE</span>
+                <span>ACTIONS</span>
+            </div>
+
+            <div id="taskList" class="task-list" style="background: rgba(22, 27, 44, 0.5); border-radius: 0 0 15px 15px;">
+                
+            </div>
         </div>
-
-        <div class="glass-card">
-            <h3><i data-lucide="folder"></i> Notes Vault</h3>
-            <div class="form-group"><label>NOTE NAME</label><input type="text" id="noteTitle" placeholder="e.g. Unit 1 Notes"></div>
-            <textarea id="noteContent" placeholder="Content..."></textarea>
-            <button class="btn btn-p" style="background:#8b5cf6;" onclick="addNote()">Save File</button>
-            <div id="notesVault" class="notes-folder-view"></div>
+         <div class="glass-card">
+            <h3><i data-lucide="bar-chart-3"></i> Mission Analytics</h3>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <label>TOTAL</label>
+                    <div id="totalCount" class="stat-val">0</div>
+                </div>
+                <div class="stat-box">
+                    <label style="color: #10b981;">COMPLETED</label>
+                    <div id="completedCount" class="stat-val" style="color: #10b981;">0</div>
+                </div>
+                <div class="stat-box">
+                    <label style="color: #f59e0b;">UPCOMING</label>
+                    <div id="upcomingCount" class="stat-val" style="color: #f59e0b;">0</div>
+                </div>
+                <div class="stat-box">
+                    <label style="color: #ef4444;">MISSED</label>
+                    <div id="missedCount" class="stat-val" style="color: #ef4444;">0</div>
+                </div>
+            </div>
         </div>
-    </div>
-
-    <div class="bottom-container">
-        <div class="glass-card chart-box"><h3>Completion</h3><div class="c-wrap"><canvas id="statsChart"></canvas></div><h1 id="completionRate">0%</h1></div>
-        <div class="glass-card chart-box"><h3>Priority</h3><div class="c-wrap"><canvas id="prioChart"></canvas></div></div>
-    </div>
-</div>
-
-<div id="noteModal" class="modal hidden">
-    <div class="modal-content">
-        <h2 id="modalTitle"></h2>
-        <div id="modalBody"></div>
-        <button class="btn btn-p" onclick="closeNote()">Close File</button>
     </div>
 </div>
 
 <script src="script.js"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>
