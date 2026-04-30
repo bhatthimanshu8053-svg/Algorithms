@@ -9,129 +9,178 @@ const firebaseConfig = {
     databaseURL: "https://deadlineintelligence-default-rtdb.firebaseio.com"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-let statsChart, prioChart, isLoginMode = true, currentTasks = [];
+firebase.initializeApp(firebaseConfig); 
 
-// AUTH TOGGLE FIX
-function toggleAuthMode() {
-    isLoginMode = !isLoginMode;
-    const title = document.getElementById('auth-main-title');
-    const btn = document.getElementById('authBtn');
-    const footerTxt = document.getElementById('auth-footer-text');
-    const toggleLink = document.getElementById('toggleMsg');
+var auth = firebase.auth();
+var db = firebase.database();
 
-    if (!isLoginMode) {
-        title.innerText = "Student Registration";
-        btn.innerText = "Register Now";
-        footerTxt.innerText = "Already have an account?";
-        toggleLink.innerText = "Login here";
+var loginMode = true; 
+var taskListArray = []; 
+
+function switchScreen() {
+    if (loginMode == true) {
+        loginMode = false;
+        document.getElementById('auth-main-title').innerText = "Student Registration";
+        document.getElementById('authBtn').innerText = "Register";
     } else {
-        title.innerText = "Student Login";
-        btn.innerText = "Login";
-        footerTxt.innerText = "Don't have an account?";
-        toggleLink.innerText = "Create Account";
+        loginMode = true;
+        document.getElementById('auth-main-title').innerText = "Student Login";
+        document.getElementById('authBtn').innerText = "Login";
     }
 }
 
 function handleAuth() {
-    const e = document.getElementById('email').value, p = document.getElementById('password').value;
-    if(!e || !p) return alert("Please fill fields!");
+    var email = document.getElementById('email').value;
+    var pass = document.getElementById('password').value;
     
-    if(isLoginMode) {
-        auth.signInWithEmailAndPassword(e, p).catch(err => alert(err.message));
+    if (loginMode == true) {
+        auth.signInWithEmailAndPassword(email, pass).catch(function(err) {
+            alert("Error: " + err.message);
+        });
     } else {
-        auth.createUserWithEmailAndPassword(e, p).catch(err => alert(err.message));
+        auth.createUserWithEmailAndPassword(email, pass).catch(function(err) {
+            alert("Error: " + err.message);
+        });
     }
 }
 
-auth.onAuthStateChanged(user => {
-    if (user) {
-        document.getElementById('auth-screen').classList.add('hidden');
+auth.onAuthStateChanged(function(user) {
+    if (user != null) {
+        document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'block';
-        document.getElementById('userMail').innerText = user.email;
-        initCharts(); syncData();
+        fetchData(); 
     } else {
-        document.getElementById('auth-screen').classList.remove('hidden');
+        document.getElementById('auth-screen').style.display = 'flex';
         document.getElementById('app-screen').style.display = 'none';
     }
 });
 
-function logout() { auth.signOut(); }
-
-function addTask() {
-    const name = document.getElementById('tName').value, cat = document.getElementById('tCat').value;
-    const date = document.getElementById('tDate').value, prio = document.getElementById('tPrio').value;
-    if(!name || !date) return alert("Fill data!");
-    db.ref('tasks/' + auth.currentUser.uid).push({ name, category: cat, date, prio: parseInt(prio), done: false });
-    document.getElementById('tName').value = '';
+function logout() {
+    auth.signOut();
 }
 
-function syncData() {
-    db.ref('tasks/' + auth.currentUser.uid).on('value', snap => {
-        currentTasks = snap.val() ? Object.keys(snap.val()).map(id => ({id, ...snap.val()[id]})) : [];
-        renderTasks(currentTasks); updateAnalytics(); checkAlerts();
+function fetchData() {
+    var user_id = auth.currentUser.uid;
+    db.ref('tasks/' + user_id).on('value', function(snap) {
+        var all_data = snap.val();
+        taskListArray = []; 
+        
+        if (all_data != null) {
+            for (var key in all_data) {
+                var single_item = all_data[key];
+                single_item.id = key;
+                taskListArray.push(single_item);
+            }
+        }
+        drawTable(); 
+        calcStats(); 
     });
-    db.ref('notes/' + auth.currentUser.uid).on('value', snap => {
-        const vault = document.getElementById('notesVault'); vault.innerHTML = '';
-        const data = snap.val();
-        if(data) Object.keys(data).forEach(id => {
-            const n = data[id];
-            const d = document.createElement('div'); d.className = 'note-file-link';
-            d.innerHTML = `<i data-lucide="file-text" size="14"></i> ${n.title}`;
-            d.onclick = () => { document.getElementById('modalTitle').innerText = n.title; document.getElementById('modalBody').innerText = n.content; document.getElementById('noteModal').classList.remove('hidden'); };
-            vault.prepend(d);
+}
+
+function saveTask() {
+    var t_title = document.getElementById('tName').value;
+    var t_date = document.getElementById('tDate').value;
+    
+    if (t_title == "" || t_date == "") {
+        alert("Saari details bharo bhai!");
+    } else {
+        var user_id = auth.currentUser.uid;
+        db.ref('tasks/' + user_id).push({
+            taskName: t_title,
+            taskDate: t_date,
+            status: "pending" 
         });
-        lucide.createIcons();
+        document.getElementById('tName').value = "";
+    }
+}
+
+function deleteTask(id) {
+    var user_id = auth.currentUser.uid;
+    db.ref('tasks/' + user_id + '/' + id).remove();
+}
+
+function toggleStatus(id, isChecked) {
+    var user_id = auth.currentUser.uid;
+    var finalStatus = "pending";
+    
+    if (isChecked == true) {
+        finalStatus = "completed";
+    }
+    
+    db.ref('tasks/' + user_id + '/' + id).update({
+        status: finalStatus
     });
 }
 
-function renderTasks(arr) {
-    const list = document.getElementById('taskList'); list.innerHTML = '';
-    arr.forEach(t => {
-        const c = t.prio == 3 ? 'red' : t.prio == 2 ? 'orange' : 'green';
-        const div = document.createElement('div'); div.className = 'task-item';
-        div.innerHTML = `<input type="checkbox" ${t.done?'checked':''} onclick="toggleTask('${t.id}', ${t.done})" style="width:25px; height:25px;">
-            <div style="flex:1"><span class="tag ${c}">${t.prio==3?'High':'Mid'}</span><span class="tag" style="background:rgba(255,255,255,0.1)">${t.category}</span>
-            <div style="font-weight:700; font-size:18px; margin-top:5px; text-decoration:${t.done?'line-through':'none'}">${t.name}</div>
-            <small style="opacity:0.5">${t.date}</small></div>
-            <button onclick="deleteTask('${t.id}')" style="background:none; border:none; color:#ef4444; cursor:pointer;"><i data-lucide="trash-2" size="18"></i></button>`;
-        list.appendChild(div);
-    });
-    lucide.createIcons();
+function drawTable() {
+    var box = document.getElementById('taskList');
+    box.innerHTML = ""; 
+
+    for (var i = 0; i < taskListArray.length; i++) {
+        var data = taskListArray[i];
+        
+        var itemStatus = "pending";
+        if (data.status != null) {
+            itemStatus = data.status;
+        }
+
+        var isDone = "";
+        var line = "none";
+        var light = "1";
+        
+        if (itemStatus == "completed") {
+            isDone = "checked";
+            line = "line-through";
+            light = "0.5";
+        }
+
+        var myRow = document.createElement('div');
+        myRow.className = 'task-item';
+        
+        var htmlCode = '<span><input type="checkbox" ' + isDone + ' onclick="toggleStatus(\'' + data.id + '\', this.checked)"></span>';
+        htmlCode = htmlCode + '<span style="text-decoration:' + line + '; opacity:' + light + '">' + data.taskName + '</span>';
+        htmlCode = htmlCode + '<span>' + data.taskDate + '</span>';
+        htmlCode = htmlCode + '<span><button onclick="deleteTask(\'' + data.id + '\')" style="color:red; border:1px solid red; background:none; padding:5px;">Delete</button></span>';
+        
+        myRow.innerHTML = htmlCode;
+        box.appendChild(myRow);
+    }
 }
 
-function checkAlerts() {
-    const alertBox = document.getElementById('systemAlert');
-    const urgent = currentTasks.find(t => !t.done && t.prio === 3);
-    if(urgent) { alertBox.innerText = `⚠️ ALERT: High Priority Mission "${urgent.name}" is pending!`; alertBox.classList.remove('hidden'); }
-    else { alertBox.classList.add('hidden'); }
-}
+function calcStats() {
+    var total = taskListArray.length;
+    var done = 0;
+    var aane_wala = 0;
+    var chhut_gaya = 0;
+    
+    var d = new Date();
+    var year = d.getFullYear();
+    var month = d.getMonth() + 1;
+    var day = d.getDate();
+    
+    if (month < 10) { month = "0" + month; }
+    if (day < 10) { day = "0" + day; }
+    
+    var todayStr = year + "-" + month + "-" + day;
 
-function addNote() {
-    const t = document.getElementById('noteTitle').value, c = document.getElementById('noteContent').value;
-    if(t && c) db.ref('notes/' + auth.currentUser.uid).push({ title: t, content: c });
-    document.getElementById('noteTitle').value = ''; document.getElementById('noteContent').value = '';
-}
-function closeNote() { document.getElementById('noteModal').classList.add('hidden'); }
+    for (var i = 0; i < taskListArray.length; i++) {
+        var item = taskListArray[i];
+        var s = "pending";
+        if (item.status != null) { s = item.status; }
 
-function initCharts() {
-    Chart.defaults.color = '#94a3b8';
-    if(statsChart) statsChart.destroy(); if(prioChart) prioChart.destroy();
-    statsChart = new Chart(document.getElementById('statsChart'), { type: 'doughnut', data: { datasets: [{ data: [1, 0], backgroundColor: ['#2d334a', '#6366f1'], borderWidth: 0 }] }, options: { cutout: '85%', maintainAspectRatio: false } });
-    prioChart = new Chart(document.getElementById('prioChart'), { type: 'bar', data: { labels: ['High', 'Mid', 'Low'], datasets: [{ data: [0,0,0], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderRadius: 10 }] }, options: { maintainAspectRatio: false } });
-}
+        if (s == "completed") {
+            done = done + 1;
+        } else {
+            if (item.taskDate < todayStr) {
+                chhut_gaya = chhut_gaya + 1;
+            } else {
+                aane_wala = aane_wala + 1;
+            }
+        }
+    }
 
-function updateAnalytics() {
-    const total = currentTasks.length, done = currentTasks.filter(t => t.done).length;
-    document.getElementById('completionRate').innerText = total === 0 ? "0%" : Math.round((done/total)*100) + "%";
-    statsChart.data.datasets[0].data = [total-done, done]; statsChart.update();
-    prioChart.data.datasets[0].data = [currentTasks.filter(t=>t.prio==3).length, currentTasks.filter(t=>t.prio==2).length, currentTasks.filter(t=>t.prio==1).length];
-    prioChart.update();
+    document.getElementById('totalCount').innerText = total;
+    document.getElementById('completedCount').innerText = done;
+    document.getElementById('upcomingCount').innerText = aane_wala;
+    document.getElementById('missedCount').innerText = chhut_gaya;
 }
-
-function toggleTask(id, current) { db.ref('tasks/' + auth.currentUser.uid + '/' + id).update({done: !current}); }
-function deleteTask(id) { db.ref('tasks/' + auth.currentUser.uid + '/' + id).remove(); }
-function syncFilter() { const q = document.getElementById('searchInput').value.toLowerCase(); const p = document.getElementById('prioFilter').value; renderTasks(currentTasks.filter(t => t.name.toLowerCase().includes(q) && (p === 'all' || t.prio == p))); }
-lucide.createIcons();
